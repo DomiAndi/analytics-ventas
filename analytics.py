@@ -51,6 +51,42 @@ def cargar_datos(ruta_csv: str, ruta_json: str) -> tuple:
 
 
 # -----------------------------------------------------------------------------
+# 3. Función de Transformación Personalizada
+# -----------------------------------------------------------------------------
+
+
+def transformar_datos(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Filtra, transforma y agrega los datos de ventas.
+
+    Pasos internos:
+        - WHERE:    Filtra por región (REGION_FILTRO) y categorías válidas (CATEGORIAS_VALIDAS).
+        - SELECT:   Calcula la columna 'venta_total' (cantidad * precio).
+        - GROUP BY: Agrupa por región y categoría, calculando suma y promedio.
+
+    Args:
+        df: DataFrame original de ventas.
+
+    Returns:
+        DataFrame agregado con columnas: region, categoria, total_ventas, promedio_precio.
+    """
+    # WHERE: Filtrar por región y categorías válidas
+    mask = (df["region"] == REGION_FILTRO) & (df["categoria"].isin(CATEGORIAS_VALIDAS))
+    df_filtrado = df.loc[mask].copy()  # .copy() evita SettingWithCopyWarning
+
+    # SELECT: Crear nueva columna de venta total
+    df_filtrado["venta_total"] = df_filtrado["cantidad"] * df_filtrado["precio"]
+
+    # GROUP BY: Ventas agregadas por región y categoría
+    df_agregado = df_filtrado.groupby(["region", "categoria"]).agg(
+        total_ventas=("venta_total", "sum"),
+        promedio_precio=("precio", "mean")
+    ).reset_index()
+
+    return df_agregado
+
+
+# -----------------------------------------------------------------------------
 # Ejecución principal
 # -----------------------------------------------------------------------------
 
@@ -59,5 +95,9 @@ if __name__ == "__main__":
 
     if ventas is not None and clientes is not None:
         print("✓ Datos cargados exitosamente.")
+
+        df_ventas = transformar_datos(ventas)
+        print("✓ Transformación completada.")
+        print(f"  - Filas resultantes: {df_ventas.shape[0]}")
     else:
         print("✗ No se pudieron cargar los datos.")
